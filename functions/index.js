@@ -16,36 +16,37 @@ app.use(cors())
 // For some reason I don't get intellisense when importing using "require"
 const stripe = require("stripe")(process.env.STRIPE_SK)
 
-const calculatePrice = (items) => {
-  // this function calculates the price server side, to make sure it wasn't tampered with on the client
-  console.log(items)
-  let totalCost = 0
-  items.forEach((item) => {
-    db.doc(`/items/${item.itemId}`)
-      .get()
-      .then((doc) => {
-        console.log(doc)
-        totalCost += doc.data().price * item.quantity
-      })
-  })
-  return totalCost
-}
-
 app.post("/create-payment-intent", async (req, res) => {
   const { items } = req.body
-  try {
-    console.log(`calculated price: ${calculatePrice(items)}`)
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: 1234,
-      currency: "cad",
+
+  let itemIds = items.map((item) => db.doc(`items/${item.itemId}`))
+  let totalCostCents = 0
+  db.getAll(...itemIds)
+    .then((docs) => {
+      docs.forEach((doc, index) => {
+        totalCostCents += doc.data().price * 100 * items[index].quantity
+      })
     })
-    console.log(`payment intent: ${paymentIntent}`)
-    res.send({
-      clientSecret: paymentIntent.client_secret,
+    .then(() => {
+      stripe.paymentIntents
+        .create({
+          amount: totalCostCents,
+          currency: "cad",
+        })
+        .then((data) => {
+          res.send({
+            clientSecret: data.client_secret,
+          })
+        })
+        .catch((err) => {
+          console.error(err)
+          res.status(400).send({ error: err })
+        })
     })
-  } catch (error) {
-    res.status(500).send({ error: error })
-  }
+    .catch((err) => {
+      console.error(err)
+      res.status(500).send({ error: "Something went wrong" })
+    })
 })
 
 exports.api = functions.https.onRequest(app)

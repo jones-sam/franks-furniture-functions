@@ -63,3 +63,5 @@ node_modules/
 
 # dotenv environment variables file
 .env
+
+functions/util/franks-furniture-firebase-adminsdk-phb64-e6e148f840.json
