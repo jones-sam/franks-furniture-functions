@@ -1,7 +1,9 @@
+const functions = require("firebase-functions")
+
 // import Stripe from "stripe"
 // const stripe = new Stripe(process.env.STRIPE_SK)
 // For some reason I don't get intellisense when importing using "require"
-const stripe = require("stripe")(process.env.STRIPE_SK)
+const stripe = require("stripe")(functions.config().stripe.sk)
 
 const { db } = require("../util/admin")
 
